@@ -37,10 +37,16 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Prepare game
-        run: npm run build
+        run: |
+          npm run build
+          test -s www/index.html
+          test -s www/game.js
 
-      - name: Create Android project
-        run: npx cap add android
+      - name: Create Android project if missing
+        run: |
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
 
       - name: Sync Android project
         run: npx cap sync android
