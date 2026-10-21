@@ -1,17 +1,19 @@
 
 {
   "name": "neon-snake",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
-    "build": "mkdir -p www && cp public/index.html www/index.html",
+    "build": "mkdir -p www && cp public/index.html www/index.html && esbuild public/game.js --bundle --minify --format=iife --outfile=www/game.js",
     "build:android": "cap sync android"
   },
   "dependencies": {
     "@capacitor/core": "^7.4.3",
-    "@capacitor/android": "^7.4.3"
+    "@capacitor/android": "^7.4.3",
+    "three": "^0.180.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.4.3"
+    "@capacitor/cli": "^7.4.3",
+    "esbuild": "^0.25.0"
   }
 }
