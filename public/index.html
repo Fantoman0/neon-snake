@@ -5,604 +5,214 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#050510">
-<title>NEON SNAKE — Cyber Arcade</title>
+<title>NEON SNAKE 3D</title>
 <style>
-:root{
+:root {
   --bg:#050510;--panel:#10182a;--green:#00ff9c;
   --pink:#ff00e5;--cyan:#00d9ff;--text:#f4f7ff;
-  --muted:#9aabc9;--line:#00ff9c44;
+  --muted:#9aabc9;
 }
 *{box-sizing:border-box}
-html{min-height:100%;background:var(--bg)}
-body{
-  margin:0;min-height:100vh;min-height:100dvh;
-  padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom);
-  background:radial-gradient(ellipse at top,#111a30 0%,var(--bg) 68%);
-  color:var(--text);font-family:system-ui,sans-serif;
-  text-align:center;overscroll-behavior:none;
+html,body{
+  margin:0;width:100%;height:100%;overflow:hidden;
+  background:var(--bg);color:var(--text);
+  font-family:system-ui,sans-serif;
+  overscroll-behavior:none;
 }
-button,select,input{font:inherit}
-button{
-  cursor:pointer;touch-action:manipulation;
-  -webkit-tap-highlight-color:transparent;
-}
-button:focus-visible,select:focus-visible{
-  outline:2px solid var(--cyan);outline-offset:3px;
-}
+button{font:inherit;touch-action:manipulation;cursor:pointer}
 button:active{transform:scale(.97)}
-button:disabled{opacity:.4;cursor:not-allowed}
-.app{width:100%;max-width:520px;margin:auto;padding:10px 0 18px}
-.brand{margin:6px 0 2px;font-size:clamp(30px,8vw,48px);
-  line-height:1.15;direction:ltr;letter-spacing:2px;
-  color:var(--green);text-shadow:0 0 10px #00ff9c88,0 0 28px #00ff9c55}
-.tagline{margin:5px 0 20px;color:var(--muted);font-size:12px;letter-spacing:2px}
-.panel{
-  padding:20px 16px;background:#0b1120dd;
-  border:1px solid var(--line);border-radius:22px;
-  box-shadow:0 0 28px #00ff9c0d,inset 0 0 24px #00ff9c05;
+#app{position:relative;width:100%;height:100%;height:100dvh;overflow:hidden}
+#world{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{
+  position:absolute;top:env(safe-area-inset-top,8px);left:12px;right:12px;
+  display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+  pointer-events:none;
 }
-.menu-title{font-size:23px;margin:4px 0 8px}
-.menu-desc{font-size:13px;color:var(--muted);line-height:1.8;margin:0 auto 18px}
-.btn{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  width:100%;min-height:49px;padding:12px 16px;
-  border-radius:13px;border:1px solid var(--green);
-  background:#0b2b20;color:var(--green);font-weight:800;
+.stat{
+  min-width:83px;text-align:center;padding:9px 12px;
+  border:1px solid #00ff9c55;border-radius:13px;
+  background:#070b18d9;backdrop-filter:blur(8px);
 }
-.btn.primary{
-  background:linear-gradient(120deg,#00ff9c,#00d9b1);
-  color:#04110d;border:0;box-shadow:0 0 22px #00ff9c33;
-}
-.btn.secondary{background:#111a2b;color:var(--text);border-color:#ffffff20}
-.btn.danger{color:#ff8ba9;border-color:#ff557744;background:#28121d}
-.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
-.stat{padding:11px 4px;background:var(--panel);border:1px solid #ffffff12;border-radius:13px}
 .stat span{display:block;font-size:11px;color:var(--muted)}
-.stat strong{display:block;font-size:23px;color:var(--green);margin-top:3px}
+.stat strong{display:block;color:var(--green);font-size:22px}
+#topButtons{display:flex;gap:7px;pointer-events:auto}
+.smallBtn{
+  border:1px solid #00ff9c66;background:#0b1823e8;
+  color:var(--green);border-radius:12px;padding:10px 12px;
+}
+#menu,#pause,#result,#settings{
+  position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;padding:20px;
+  background:#03040de5;backdrop-filter:blur(10px);z-index:5;
+}
+.card{
+  width:min(100%,410px);max-height:88dvh;overflow:auto;
+  padding:23px 19px;border:1px solid #00ff9c77;border-radius:23px;
+  background:linear-gradient(145deg,#111b2c,#080b17);
+  box-shadow:0 0 38px #00ff9c16;text-align:center;
+}
+.logo{
+  font-size:clamp(32px,9vw,48px);line-height:1.15;
+  color:var(--green);direction:ltr;letter-spacing:2px;
+  text-shadow:0 0 12px #00ff9c88,0 0 28px #00ff9c44;margin:5px 0;
+}
+.subtitle{font-size:12px;color:var(--cyan);letter-spacing:2px}
+.desc{font-size:13px;color:var(--muted);line-height:1.9;margin:13px 0 20px}
+.btn{
+  width:100%;min-height:48px;padding:12px;
+  border:1px solid #00ff9c66;border-radius:13px;
+  color:var(--green);background:#0b2b20;font-weight:800;
+  margin-top:9px;
+}
+.btn.primary{background:linear-gradient(120deg,#00ff9c,#00d9b1);color:#04110d;border:0}
+.btn.secondary{background:#111a2b;color:#fff;border-color:#ffffff22}
+.btn.danger{background:#28121d;color:#ff91a9;border-color:#ff557744}
+.btnRow{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .hidden{display:none!important}
-.screen{animation:appear .22s ease-out}
-@keyframes appear{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
-.arena{
-  position:relative;width:min(94vw,480px);margin:auto;
-  overflow:hidden;border:2px solid var(--green);border-radius:15px;
-  box-shadow:0 0 24px #00ff9c2b;line-height:0;
+#joystick{
+  position:absolute;left:22px;bottom:calc(25px + env(safe-area-inset-bottom));
+  width:144px;height:144px;border:2px solid #00ff9c66;border-radius:50%;
+  background:#071522aa;backdrop-filter:blur(5px);touch-action:none;
+  box-shadow:0 0 24px #00ff9c14;z-index:2;
 }
-canvas{display:block;width:100%;height:auto;touch-action:none}
-.hud{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:10px 0}
-.hud-item{background:var(--panel);border:1px solid #ffffff13;border-radius:11px;padding:8px 3px}
-.hud-item span{display:block;font-size:11px;color:var(--muted)}
-.hud-item strong{display:block;font-size:20px;color:var(--green);margin-top:2px}
-.game-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
-.game-actions .btn{min-height:43px;padding:8px}
-.controls{
-  display:grid;grid-template-columns:repeat(3,minmax(52px,68px));
-  gap:7px;justify-content:center;margin:13px auto;
-  direction:ltr;touch-action:manipulation;
+#stick{
+  position:absolute;left:50%;top:50%;width:59px;height:59px;
+  margin:-29.5px;border:2px solid var(--green);border-radius:50%;
+  background:#00ff9c38;box-shadow:0 0 18px #00ff9c55;
+  pointer-events:none;
 }
-.controls button{
-  min-height:54px;padding:0;font-size:24px;
-  border:1px solid var(--green);border-radius:13px;
-  color:var(--green);background:#0b2b20;
-  box-shadow:0 0 12px #00ff9c0d;
+#joystickLabel{
+  position:absolute;left:0;right:0;bottom:-23px;text-align:center;
+  color:#a7c8c5;font-size:11px;white-space:nowrap;
 }
-.empty{visibility:hidden}
-.hint{font-size:12px;color:var(--muted);line-height:1.7;margin:10px auto}
-.overlay{
-  position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;
-  padding:18px;background:#03040de8;backdrop-filter:blur(10px);
+#hint{
+  position:absolute;bottom:calc(22px + env(safe-area-inset-bottom));
+  right:15px;max-width:42%;font-size:11px;line-height:1.8;
+  color:#d4e6f0;text-align:right;text-shadow:0 2px 5px #000;
+  pointer-events:none;
 }
-.dialog{
-  width:100%;max-width:430px;max-height:88dvh;overflow:auto;
-  padding:22px 18px;border-radius:22px;background:#0d1425;
-  border:1px solid #00ff9c66;box-shadow:0 0 35px #00ff9c15;
-  text-align:right;
+#toast{
+  position:absolute;top:26%;left:10%;right:10%;text-align:center;
+  color:var(--green);font-size:22px;font-weight:bold;
+  text-shadow:0 0 15px #00ff9c;pointer-events:none;
 }
-.dialog h2{margin:0 0 7px;color:var(--green);text-align:center}
-.dialog-desc{text-align:center;color:var(--muted);font-size:13px;margin:0 0 20px}
-.setting{margin:15px 0}
-.setting label,.setting .setting-label{display:block;font-size:14px;margin-bottom:8px}
-.setting small{display:block;color:var(--muted);font-size:11px;margin-top:5px}
+.setting{text-align:right;margin:17px 0}
+.setting label{display:block;margin-bottom:8px;font-size:14px}
 select{
   width:100%;padding:12px;border-radius:10px;
-  border:1px solid #ffffff24;background:#101a2c;color:white;
+  background:#101a2c;color:#fff;border:1px solid #ffffff28;
 }
-.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.toggle-row label{margin:0}
 input[type=checkbox]{width:22px;height:22px;accent-color:var(--green)}
-.color-row{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
-.color-choice{
-  height:42px;border:2px solid #ffffff30;border-radius:11px;
-  background:var(--swatch);box-shadow:0 0 12px color-mix(in srgb,var(--swatch) 20%,transparent);
-}
-.color-choice.active{outline:2px solid white;outline-offset:2px;border-color:var(--swatch)}
-.dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px}
-.toast{min-height:20px;color:var(--cyan);font-size:12px;margin-top:8px}
-footer{color:#62718e;font-size:11px;margin-top:16px}
-@media(max-height:720px){
-  .app{padding-top:3px}.brand{font-size:29px}.tagline{margin-bottom:9px}
-  .panel{padding:13px}.menu-desc{margin-bottom:10px}
-  .stats{margin:9px 0}.arena{width:min(76vw,390px)}
-  .controls{margin:8px auto;gap:5px}.controls button{min-height:44px}
-  .hint{margin:5px auto}
+.setting.toggle{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.setting.toggle label{margin:0}
+@media(max-width:380px){
+  #joystick{width:120px;height:120px;left:14px}
+  #stick{width:51px;height:51px;margin:-25.5px}
+  .stat{min-width:69px;padding:7px}
+  .stat strong{font-size:19px}
+  .smallBtn{padding:9px}
 }
 @media(min-width:700px){
-  body{padding-top:20px}.app{padding-top:12px}
-}
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation:none!important;transition:none!important}
+  #joystick{left:calc(50% - 340px);bottom:45px}
+  #hint{right:calc(50% - 340px);bottom:45px}
 }
 </style>
 </head>
 <body>
-<main class="app">
-  <header>
-    <h1 class="brand">NEON SNAKE</h1>
-    <p class="tagline">CYBER ARCADE · EDITION 2.0</p>
-  </header>
+<div id="app">
+  <canvas id="world" aria-label="ساحة لعبة الثعبان ثلاثية الأبعاد"></canvas>
 
-  <section id="menuScreen" class="screen">
-    <div class="panel">
-      <h2 class="menu-title">جاهز للتحدي؟ 🐍</h2>
-      <p class="menu-desc">اجمع الطاقة، طوّر نتيجتك، وكن أسطورة الأركيد.<br>هل تستطيع تحطيم رقمك القياسي؟</p>
-      <div class="stats">
+  <div id="hud" class="hidden">
+    <div class="stat"><span>النقاط</span><strong id="score">0</strong></div>
+    <div class="stat"><span>أفضل نتيجة</span><strong id="best">0</strong></div>
+    <div id="topButtons">
+      <button id="pauseBtn" class="smallBtn" aria-label="إيقاف مؤقت">Ⅱ</button>
+      <button id="menuBtn" class="smallBtn" aria-label="القائمة الرئيسية">⌂</button>
+    </div>
+  </div>
+
+  <div id="joystick" class="hidden" aria-label="عصا التحكم">
+    <div id="stick"></div>
+    <div id="joystickLabel">اسحب للتحكم</div>
+  </div>
+  <div id="hint" class="hidden">حرّك العصا لتغيير الاتجاه<br>اجمع الكرات الوردية وتجنب الاصطدام</div>
+  <div id="toast"></div>
+
+  <section id="menu">
+    <div class="card">
+      <h1 class="logo">NEON SNAKE</h1>
+      <div class="subtitle">THREE-DIMENSIONAL ARCADE</div>
+      <p class="desc">ادخل عالم النيون ثلاثي الأبعاد.<br>تحكم بالثعبان من خلفه، واجمع الطاقة لتحطيم رقمك القياسي.</p>
+      <div class="btnRow">
         <div class="stat"><span>أفضل نتيجة</span><strong id="menuBest">0</strong></div>
-        <div class="stat"><span>عدد الجولات</span><strong id="gamesPlayed">0</strong></div>
-        <div class="stat"><span>الطعام المجموع</span><strong id="totalFood">0</strong></div>
+        <div class="stat"><span>الجولات</span><strong id="games">0</strong></div>
       </div>
-      <button id="playBtn" class="btn primary">▶ ابدأ اللعب</button>
-      <div class="btn-row">
-        <button id="settingsBtn" class="btn secondary">⚙ الإعدادات</button>
-        <button id="helpBtn" class="btn secondary">؟ طريقة اللعب</button>
-      </div>
+      <button id="playBtn" class="btn primary">▶ ابدأ المغامرة</button>
+      <button id="settingsBtn" class="btn secondary">⚙ الإعدادات</button>
+      <p class="desc">3D حقيقي · كاميرا تتبع · تحكم باللمس</p>
     </div>
-    <p class="hint">نسخة فردية · تحكم باللمس أو لوحة المفاتيح</p>
   </section>
 
-  <section id="gameScreen" class="screen hidden">
-    <div class="hud">
-      <div class="hud-item"><span>النقاط</span><strong id="score">0</strong></div>
-      <div class="hud-item"><span>أفضل نتيجة</span><strong id="gameBest">0</strong></div>
-      <div class="hud-item"><span>المستوى</span><strong id="level">1</strong></div>
-    </div>
-    <div class="arena"><canvas id="game" width="480" height="480"></canvas></div>
-    <div class="game-actions">
-      <button id="pauseBtn" class="btn secondary">Ⅱ إيقاف مؤقت</button>
-      <button id="quitBtn" class="btn secondary">⌂ القائمة الرئيسية</button>
-    </div>
-    <div id="controls" class="controls">
-      <span class="empty"></span><button type="button" data-dir="up" aria-label="أعلى">▲</button><span class="empty"></span>
-      <button type="button" data-dir="left" aria-label="يسار">◀</button>
-      <button type="button" data-dir="down" aria-label="أسفل">▼</button>
-      <button type="button" data-dir="right" aria-label="يمين">▶</button>
-    </div>
-    <p class="hint">الأسهم أو WASD · المس الشاشة واسحب لتغيير الاتجاه · P للإيقاف</p>
-  </section>
-
-  <footer>NEON SNAKE · MADE FOR ARCADE LOVERS</footer>
-</main>
-
-<div id="settingsOverlay" class="overlay hidden">
-  <section class="dialog">
-    <h2>⚙ الإعدادات</h2>
-    <p class="dialog-desc">خصص تجربتك واحفظ اختياراتك.</p>
-
-    <div class="setting">
-      <label for="speedSetting">سرعة اللعبة</label>
-      <select id="speedSetting">
-        <option value="easy">هادئة — مناسبة للمبتدئين</option>
-        <option value="normal">عادية — متوازنة</option>
-        <option value="fast">سريعة — تحدٍّ أكبر</option>
-      </select>
-    </div>
-
-    <div class="setting">
-      <span class="setting-label">لون الثعبان</span>
-      <div class="color-row">
-        <button class="color-choice" data-color="#00ff9c" style="--swatch:#00ff9c" aria-label="أخضر"></button>
-        <button class="color-choice" data-color="#00d9ff" style="--swatch:#00d9ff" aria-label="سماوي"></button>
-        <button class="color-choice" data-color="#ff00e5" style="--swatch:#ff00e5" aria-label="وردي"></button>
-        <button class="color-choice" data-color="#ffe66d" style="--swatch:#ffe66d" aria-label="ذهبي"></button>
-      </div>
-    </div>
-
-    <div class="setting toggle-row">
-      <label for="soundSetting">المؤثرات الصوتية</label>
-      <input id="soundSetting" type="checkbox">
-    </div>
-    <div class="setting toggle-row">
-      <label for="vibrateSetting">الاهتزاز عند الأكل (إذا كان مدعومًا)</label>
-      <input id="vibrateSetting" type="checkbox">
-    </div>
-    <div class="setting toggle-row">
-      <label for="dpadSetting">إظهار أزرار الاتجاهات</label>
-      <input id="dpadSetting" type="checkbox">
-    </div>
-    <div class="setting toggle-row">
-      <label for="swipeSetting">التحكم بالسحب على الساحة</label>
-      <input id="swipeSetting" type="checkbox">
-    </div>
-
-    <div class="dialog-actions">
-      <button id="saveSettings" class="btn primary">حفظ الإعدادات</button>
-      <button id="closeSettings" class="btn secondary">رجوع</button>
-    </div>
-    <p id="settingsToast" class="toast" aria-live="polite"></p>
-  </section>
-</div>
-
-<div id="pauseOverlay" class="overlay hidden">
-  <section class="dialog">
-    <h2>⏸ اللعبة متوقفة</h2>
-    <p class="dialog-desc">خذ استراحة قصيرة ثم أكمل التحدي.</p>
-    <button id="resumeBtn" class="btn primary">▶ متابعة اللعب</button>
-    <div class="btn-row">
+  <section id="pause" class="hidden">
+    <div class="card">
+      <h2>⏸ اللعبة متوقفة</h2>
+      <p class="desc">استعد ثم أكمل مغامرتك.</p>
+      <button id="resumeBtn" class="btn primary">▶ متابعة</button>
       <button id="pauseSettingsBtn" class="btn secondary">⚙ الإعدادات</button>
-      <button id="pauseMenuBtn" class="btn secondary">⌂ القائمة</button>
+      <button id="pauseMenuBtn" class="btn secondary">⌂ القائمة الرئيسية</button>
     </div>
   </section>
-</div>
 
-<div id="resultOverlay" class="overlay hidden">
-  <section class="dialog">
-    <h2 id="resultTitle">انتهت الجولة!</h2>
-    <p id="resultMessage" class="dialog-desc"></p>
-    <div class="stats">
+  <section id="result" class="hidden">
+    <div class="card">
+      <h2 id="resultTitle">انتهت الجولة</h2>
+      <p id="resultText" class="desc"></p>
       <div class="stat"><span>نتيجتك</span><strong id="finalScore">0</strong></div>
-      <div class="stat"><span>أفضل نتيجة</span><strong id="finalBest">0</strong></div>
-      <div class="stat"><span>الطعام</span><strong id="finalFood">0</strong></div>
-    </div>
-    <button id="retryBtn" class="btn primary">↻ العب مرة أخرى</button>
-    <div class="btn-row">
-      <button id="resultSettingsBtn" class="btn secondary">⚙ الإعدادات</button>
+      <button id="retryBtn" class="btn primary">↻ العب مرة أخرى</button>
       <button id="resultMenuBtn" class="btn secondary">⌂ القائمة الرئيسية</button>
     </div>
   </section>
-</div>
 
-<div id="helpOverlay" class="overlay hidden">
-  <section class="dialog">
-    <h2>🎮 طريقة اللعب</h2>
-    <p class="dialog-desc">اجمع الطعام الوردي لزيادة النقاط، وتجنب الجدران وجسم الثعبان.</p>
-    <div class="setting">📱 <b>على الهاتف:</b> استخدم أزرار الاتجاهات أو اسحب على الساحة.</div>
-    <div class="setting">💻 <b>على الكمبيوتر:</b> استخدم الأسهم أو WASD.</div>
-    <div class="setting">⏸ <b>إيقاف مؤقت:</b> اضغط P أو زر الإيقاف.</div>
-    <div class="setting">⚙ <b>التخصيص:</b> غيّر السرعة والألوان والصوت من الإعدادات.</div>
-    <button id="closeHelp" class="btn primary">فهمت، لنلعب!</button>
+  <section id="settings" class="hidden">
+    <div class="card">
+      <h2>⚙ إعدادات اللعبة</h2>
+      <div class="setting">
+        <label for="speed">سرعة الثعبان</label>
+        <select id="speed">
+          <option value="slow">هادئة</option>
+          <option value="normal">متوازنة</option>
+          <option value="fast">سريعة</option>
+        </select>
+      </div>
+      <div class="setting">
+        <label for="quality">جودة الرسومات</label>
+        <select id="quality">
+          <option value="balanced">متوازنة للموبايل</option>
+          <option value="high">عالية</option>
+        </select>
+      </div>
+      <div class="setting">
+        <label for="snakeColor">لون الثعبان</label>
+        <select id="snakeColor">
+          <option value="#00ff9c">أخضر نيون</option>
+          <option value="#00d9ff">سماوي</option>
+          <option value="#ff00e5">وردي</option>
+          <option value="#ffe66d">ذهبي</option>
+        </select>
+      </div>
+      <div class="setting toggle">
+        <label for="sound">المؤثرات الصوتية</label>
+        <input id="sound" type="checkbox" checked>
+      </div>
+      <div class="setting toggle">
+        <label for="vibration">الاهتزاز عند جمع الطعام</label>
+        <input id="vibration" type="checkbox">
+      </div>
+      <button id="saveSettings" class="btn primary">حفظ الإعدادات</button>
+      <button id="closeSettings" class="btn secondary">رجوع</button>
+    </div>
   </section>
 </div>
-
-<script>
-(() => {
-"use strict";
-
-const $ = id => document.getElementById(id);
-const canvas = $("game");
-const ctx = canvas.getContext("2d");
-const SIZE = 480, CELLS = 24, CELL = SIZE / CELLS;
-
-const DEFAULTS = {
-  speed: "normal", color: "#00ff9c", sound: true,
-  vibrate: false, dpad: true, swipe: true
-};
-
-function readJSON(key, fallback) {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? {...fallback, ...JSON.parse(v)} : {...fallback};
-  } catch (_) { return {...fallback}; }
-}
-function readNumber(key) {
-  try { return Number(localStorage.getItem(key)) || 0; }
-  catch (_) { return 0; }
-}
-function saveNumber(key, value) {
-  try { localStorage.setItem(key, String(value)); } catch (_) {}
-}
-let settings = readJSON("neon-settings", DEFAULTS);
-let best = readNumber("neon-best");
-let games = readNumber("neon-games");
-let totalFood = readNumber("neon-total-food");
-
-let snake = [], food = {x:16,y:12};
-let dir = {x:1,y:0}, next = {x:1,y:0};
-let score = 0, eaten = 0, level = 1;
-let state = "menu", timer = null, audio = null;
-let touchStart = null;
-
-const SPEEDS = {easy:190, normal:140, fast:100};
-const DIRECTIONS = {
-  up:{x:0,y:-1}, down:{x:0,y:1},
-  left:{x:-1,y:0}, right:{x:1,y:0}
-};
-
-function show(id) { $(id).classList.remove("hidden"); }
-function hide(id) { $(id).classList.add("hidden"); }
-function saveSettings() {
-  try { localStorage.setItem("neon-settings", JSON.stringify(settings)); } catch (_) {}
-  applySettings();
-}
-function applySettings() {
-  document.documentElement.style.setProperty("--green", settings.color);
-  $("controls").classList.toggle("hidden", !settings.dpad);
-  document.querySelectorAll(".color-choice").forEach(b => {
-    b.classList.toggle("active", b.dataset.color === settings.color);
-  });
-  $("speedSetting").value = settings.speed;
-  $("soundSetting").checked = settings.sound;
-  $("vibrateSetting").checked = settings.vibrate;
-  $("dpadSetting").checked = settings.dpad;
-  $("swipeSetting").checked = settings.swipe;
-  $("menuBest").textContent = best;
-  $("gameBest").textContent = best;
-  $("gamesPlayed").textContent = games;
-  $("totalFood").textContent = totalFood;
-}
-function syncSettingsForm() {
-  $("speedSetting").value = settings.speed;
-  $("soundSetting").checked = settings.sound;
-  $("vibrateSetting").checked = settings.vibrate;
-  $("dpadSetting").checked = settings.dpad;
-  $("swipeSetting").checked = settings.swipe;
-  document.querySelectorAll(".color-choice").forEach(b => {
-    b.classList.toggle("active", b.dataset.color === settings.color);
-  });
-}
-function openSettings() {
-  syncSettingsForm();
-  hide("pauseOverlay");
-  hide("resultOverlay");
-  show("settingsOverlay");
-}
-function closeSettings() {
-  hide("settingsOverlay");
-  if (state === "paused") show("pauseOverlay");
-  else if (state === "over") show("resultOverlay");
-}
-function openAudio() {
-  if (!settings.sound) return null;
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return null;
-    if (!audio) audio = new AudioCtx();
-    if (audio.state === "suspended") audio.resume();
-    return audio;
-  } catch (_) { return null; }
-}
-function beep(freq=500, duration=.07, type="sine") {
-  const a = openAudio();
-  if (!a) return;
-  try {
-    const osc = a.createOscillator();
-    const gain = a.createGain();
-    osc.type = type;
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(.06, a.currentTime);
-    gain.gain.exponentialRampToValueAtTime(.001, a.currentTime + duration);
-    osc.connect(gain); gain.connect(a.destination);
-    osc.start(); osc.stop(a.currentTime + duration);
-  } catch (_) {}
-}
-function vibrate() {
-  if (!settings.vibrate) return;
-  try { if (navigator.vibrate) navigator.vibrate(25); } catch (_) {}
-}
-function updateHUD() {
-  $("score").textContent = score;
-  $("gameBest").textContent = best;
-  $("level").textContent = level;
-}
-function placeFood() {
-  const free = [];
-  for (let y=0; y<CELLS; y++) for (let x=0; x<CELLS; x++) {
-    if (!snake.some(p => p.x===x && p.y===y)) free.push({x,y});
-  }
-  if (!free.length) {
-    finish(true);
-    return false;
-  }
-  food = free[Math.floor(Math.random()*free.length)];
-  return true;
-}
-function draw() {
-  ctx.fillStyle = "#070b18";
-  ctx.fillRect(0,0,SIZE,SIZE);
-  ctx.strokeStyle = "#15223a";
-  ctx.lineWidth = 1;
-  for (let i=0; i<=CELLS; i++) {
-    ctx.beginPath(); ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,SIZE); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(SIZE,i*CELL); ctx.stroke();
-  }
-
-  ctx.save();
-  ctx.shadowColor = "#ff00e5"; ctx.shadowBlur = 22; ctx.fillStyle = "#ff00e5";
-  ctx.beginPath();
-  ctx.arc(food.x*CELL+CELL/2,food.y*CELL+CELL/2,7,0,Math.PI*2);
-  ctx.fill(); ctx.restore();
-
-  snake.forEach((p,i) => {
-    ctx.save();
-    ctx.fillStyle = i===0 ? "#ffffff" : settings.color;
-    ctx.shadowColor = settings.color; ctx.shadowBlur = i===0 ? 18 : 11;
-    ctx.beginPath();
-    ctx.roundRect(p.x*CELL+2,p.y*CELL+2,CELL-4,CELL-4,5);
-    ctx.fill(); ctx.restore();
-  });
-
-  if (state === "ready") {
-    ctx.fillStyle = "#030510aa"; ctx.fillRect(0,0,SIZE,SIZE);
-    ctx.fillStyle = "#00ff9c"; ctx.textAlign = "center";
-    ctx.font = "bold 24px system-ui";
-    ctx.fillText("اضغط ابدأ اللعب",SIZE/2,SIZE/2);
-  }
-}
-function startGame() {
-  clearInterval(timer);
-  hide("settingsOverlay"); hide("pauseOverlay"); hide("resultOverlay");
-  hide("menuScreen"); show("gameScreen");
-  score = 0; eaten = 0; level = 1;
-  snake = [{x:8,y:12},{x:7,y:12},{x:6,y:12}];
-  dir = {x:1,y:0}; next = {x:1,y:0};
-  state = "playing";
-  games++; saveNumber("neon-games",games);
-  updateHUD(); applySettings(); placeFood(); draw();
-  timer = setInterval(step, currentSpeed());
-  beep(520,.1);
-}
-function currentSpeed() {
-  const base = SPEEDS[settings.speed] || SPEEDS.normal;
-  return Math.max(58, base - (level-1)*5);
-}
-function changeDirection(name) {
-  if (state !== "playing") return;
-  const d = DIRECTIONS[name];
-  if (!d) return;
-  if (d.x === -dir.x && d.y === -dir.y) return;
-  next = {x:d.x,y:d.y};
-}
-function step() {
-  if (state !== "playing") return;
-  dir = {...next};
-  const head = {x:snake[0].x+dir.x,y:snake[0].y+dir.y};
-  const ate = head.x===food.x && head.y===food.y;
-  const body = ate ? snake : snake.slice(0,-1);
-
-  if (head.x<0 || head.x>=CELLS || head.y<0 || head.y>=CELLS ||
-      body.some(p => p.x===head.x && p.y===head.y)) {
-    finish(false); return;
-  }
-
-  snake.unshift(head);
-  if (ate) {
-    score += 10; eaten++; totalFood++;
-    saveNumber("neon-total-food",totalFood);
-    if (score > best) {
-      best = score; saveNumber("neon-best",best);
-    }
-    level = 1 + Math.floor(score/100);
-    updateHUD();
-    beep(680,.06,"triangle"); vibrate();
-    if (!placeFood()) return;
-    clearInterval(timer);
-    timer = setInterval(step,currentSpeed());
-  } else {
-    snake.pop();
-  }
-  draw();
-}
-function pauseGame() {
-  if (state !== "playing") return;
-  state = "paused"; clearInterval(timer);
-  show("pauseOverlay");
-}
-function resumeGame() {
-  if (state !== "paused") return;
-  hide("pauseOverlay");
-  state = "playing";
-  timer = setInterval(step,currentSpeed());
-}
-function finish(won) {
-  clearInterval(timer);
-  state = "over";
-  $("resultTitle").textContent = won ? "🏆 انتصار أسطوري!" : "انتهت الجولة!";
-  $("resultMessage").textContent = won ?
-    "ملأت الساحة بالكامل! أداء رائع." : "حاول مرة أخرى وحطّم رقمك القياسي.";
-  $("finalScore").textContent = score;
-  $("finalBest").textContent = best;
-  $("finalFood").textContent = eaten;
-  applySettings();
-  show("resultOverlay");
-  beep(won ? 880 : 180,.22,"sawtooth");
-}
-function goMenu() {
-  clearInterval(timer);
-  state = "menu";
-  hide("gameScreen"); hide("pauseOverlay"); hide("resultOverlay");
-  hide("settingsOverlay"); show("menuScreen");
-  applySettings();
-}
-function handlePauseKey() {
-  if (state==="playing") pauseGame();
-  else if (state==="paused") resumeGame();
-}
-$("playBtn").addEventListener("click",startGame);
-$("pauseBtn").addEventListener("click",handlePauseKey);
-$("resumeBtn").addEventListener("click",resumeGame);
-$("quitBtn").addEventListener("click",goMenu);
-$("pauseMenuBtn").addEventListener("click",goMenu);
-$("resultMenuBtn").addEventListener("click",goMenu);
-$("retryBtn").addEventListener("click",startGame);
-$("settingsBtn").addEventListener("click",openSettings);
-$("pauseSettingsBtn").addEventListener("click",openSettings);
-$("resultSettingsBtn").addEventListener("click",openSettings);
-$("closeSettings").addEventListener("click",closeSettings);
-$("helpBtn").addEventListener("click",()=>show("helpOverlay"));
-$("closeHelp").addEventListener("click",()=>hide("helpOverlay"));
-
-$("saveSettings").addEventListener("click",()=>{
-  settings.speed = $("speedSetting").value;
-  settings.sound = $("soundSetting").checked;
-  settings.vibrate = $("vibrateSetting").checked;
-  settings.dpad = $("dpadSetting").checked;
-  settings.swipe = $("swipeSetting").checked;
-  saveSettings();
-  $("settingsToast").textContent = "تم حفظ إعداداتك ✓";
-  if (state==="playing") {
-    clearInterval(timer);
-    timer = setInterval(step,currentSpeed());
-  }
-  setTimeout(()=>{ $("settingsToast").textContent=""; },1600);
-  closeSettings();
-});
-document.querySelectorAll(".color-choice").forEach(button=>{
-  button.addEventListener("click",()=>{
-    settings.color = button.dataset.color;
-    syncSettingsForm();
-  });
-});
-document.querySelectorAll("[data-dir]").forEach(button=>{
-  button.addEventListener("click",()=>changeDirection(button.dataset.dir));
-});
-document.addEventListener("keydown",event=>{
-  if (event.key==="Escape") {
-    if (!$("settingsOverlay").classList.contains("hidden")) { closeSettings(); return; }
-    if (!$("helpOverlay").classList.contains("hidden")) { hide("helpOverlay"); return; }
-    if (state==="playing" || state==="paused") { handlePauseKey(); return; }
-  }
-  if (event.key.toLowerCase()==="p") { handlePauseKey(); return; }
-  if (state!=="playing") {
-    if ((event.key==="Enter" || event.key===" ") && state==="menu") startGame();
-    return;
-  }
-  const keys = {
-    ArrowUp:"up",w:"up",W:"up",
-    ArrowDown:"down",s:"down",S:"down",
-    ArrowLeft:"left",a:"left",A:"left",
-    ArrowRight:"right",d:"right",D:"right"
-  };
-  const direction = keys[event.key];
-  if (direction) { event.preventDefault(); changeDirection(direction); }
-});
-
-canvas.addEventListener("pointerdown",event=>{
-  if (!settings.swipe || state!=="playing") return;
-  touchStart={x:event.clientX,y:event.clientY};
-});
-canvas.addEventListener("pointerup",event=>{
-  if (!touchStart) return;
-  const dx=event.clientX-touchStart.x,dy=event.clientY-touchStart.y;
-  if (Math.max(Math.abs(dx),Math.abs(dy))>20) {
-    if (Math.abs(dx)>Math.abs(dy)) changeDirection(dx>0?"right":"left");
-    else changeDirection(dy>0?"down":"up");
-  }
-  touchStart=null;
-});
-canvas.addEventListener("pointercancel",()=>{touchStart=null;});
-
-applySettings();
-snake=[{x:8,y:12},{x:7,y:12},{x:6,y:12}];
-draw();
-})();
-</script>
+<script src="./game.js"></script>
 </body>
 </html>
