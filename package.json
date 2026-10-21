@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "node ./scripts/prepare.js",
+    "build": "mkdir -p www && cp public/index.html www/index.html",
     "build:android": "cap sync android"
   },
   "dependencies": {
