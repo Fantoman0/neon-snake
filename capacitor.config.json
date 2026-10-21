@@ -1,0 +1,9 @@
+
+{
+  "appId": "com.neonsnake.game",
+  "appName": "NEON SNAKE",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
