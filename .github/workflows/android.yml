@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -30,7 +30,7 @@ jobs:
           java-version: "21"
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
