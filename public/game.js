@@ -9,11 +9,15 @@ import * as THREE from "three";
   const GRID = 32;
   const CELL = 1.5;
   const HALF = GRID * CELL / 2;
+  const FPS = 30;
+  const FRAME_MS = 1000 / FPS;
+  const MAX_PARTICLES = 90;
 
   const COLORS = {
     green: 0x00ff9c,
     pink: 0xff00e5,
     cyan: 0x00d9ff,
+    gold: 0xffe66d,
     floor: 0x070b18
   };
 
@@ -73,6 +77,7 @@ import * as THREE from "three";
 
   let score = 0;
   let state = "menu";
+
   let snake = [];
   let previousSnake = [];
 
@@ -93,10 +98,9 @@ import * as THREE from "three";
 
   let segments = [];
   let particles = [];
-  const MAX_PARTICLES = 90;
-
   let audioContext = null;
-  let lastTime = 0;
+
+  let lastFrameTime = 0;
   let accumulator = 0;
   let toastUntil = 0;
 
@@ -107,21 +111,19 @@ import * as THREE from "three";
   const canvas = $("world");
 
   // --------------------------------------------------
-  // Three.js renderer
+  // Scene and renderer
   // --------------------------------------------------
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x050510);
-  scene.fog = new THREE.FogExp2(0x050510, 0.009);
+  scene.fog = new THREE.FogExp2(0x050510, 0.006);
 
   const camera = new THREE.OrthographicCamera(
-    -21, 21, 21, -21, 0.1, 180
+    -30, 30, 30, -30, 0.1, 180
   );
 
-  // كاميرا علوية تتبع الثعبان، مع اتجاه ثابت للساحة.
   camera.up.set(0, 0, -1);
   camera.position.set(0, 60, 0.01);
-  camera.lookAt(0, 0, 0);
 
   let renderer;
 
@@ -142,23 +144,15 @@ import * as THREE from "three";
     return;
   }
 
-  renderer.setPixelRatio(
-    Math.min(
-      window.devicePixelRatio || 1,
-      settings.quality === "high" ? 1.35 : 1
-    )
-  );
-
-  renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.2;
 
   function resizeCamera() {
-    const aspect = window.innerWidth / window.innerHeight;
+    const aspect = window.innerWidth / Math.max(1, window.innerHeight);
 
-    // مساحة رؤية ثابتة نسبيًا مع مراعاة الشاشات الطولية.
-    const viewHeight = 42;
+    // رؤية أوسع قليلًا على الهواتف الطولية.
+    const viewHeight = aspect < 0.75 ? 58 : 51;
     const viewWidth = viewHeight * aspect;
 
     camera.left = -viewWidth / 2;
@@ -179,36 +173,38 @@ import * as THREE from "three";
   }
 
   // --------------------------------------------------
-  // Lighting and arena
+  // Lighting
   // --------------------------------------------------
 
   scene.add(
-    new THREE.HemisphereLight(0x91caff, 0x101020, 2)
+    new THREE.HemisphereLight(0x9adfff, 0x101020, 2.0)
   );
 
-  const mainLight = new THREE.DirectionalLight(0xffffff, 2);
-  mainLight.position.set(8, 16, 5);
+  const mainLight = new THREE.DirectionalLight(0xffffff, 2.2);
+  mainLight.position.set(8, 18, 5);
   scene.add(mainLight);
 
-  const greenLight = new THREE.PointLight(
-    COLORS.green, 9, 32
-  );
-  greenLight.position.set(-8, 4, -8);
+  const greenLight = new THREE.PointLight(COLORS.green, 8, 30);
+  greenLight.position.set(-8, 3, -8);
   scene.add(greenLight);
 
-  const pinkLight = new THREE.PointLight(
-    COLORS.pink, 7, 25
-  );
+  const pinkLight = new THREE.PointLight(COLORS.pink, 6, 24);
   pinkLight.position.set(8, 3, 8);
   scene.add(pinkLight);
 
+  // --------------------------------------------------
+  // Neon arena
+  // --------------------------------------------------
+
+  const floorMaterial = new THREE.MeshStandardMaterial({
+    color: COLORS.floor,
+    roughness: 0.85,
+    metalness: 0.18
+  });
+
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(GRID * CELL, GRID * CELL),
-    new THREE.MeshStandardMaterial({
-      color: COLORS.floor,
-      roughness: 0.85,
-      metalness: 0.1
-    })
+    floorMaterial
   );
 
   floor.rotation.x = -Math.PI / 2;
@@ -216,18 +212,32 @@ import * as THREE from "three";
   scene.add(floor);
 
   const grid = new THREE.GridHelper(
-    GRID * CELL, GRID, COLORS.green, 0x173047
+    GRID * CELL,
+    GRID,
+    COLORS.green,
+    0x142b40
   );
 
-  grid.position.y = -0.04;
+  grid.position.y = -0.035;
   scene.add(grid);
+
+  // خطوط داخلية إضافية أخف لتوضيح أرضية اللعب.
+  const fineGrid = new THREE.GridHelper(
+    GRID * CELL,
+    GRID * 2,
+    0x103d42,
+    0x0c1a2b
+  );
+
+  fineGrid.position.y = -0.045;
+  scene.add(fineGrid);
 
   const borderMaterial = new THREE.MeshStandardMaterial({
     color: COLORS.green,
     emissive: COLORS.green,
-    emissiveIntensity: 1.5,
-    metalness: 0.2,
-    roughness: 0.4
+    emissiveIntensity: 2,
+    metalness: 0.25,
+    roughness: 0.3
   });
 
   function addWall(x, z, w, d) {
@@ -240,37 +250,42 @@ import * as THREE from "three";
     scene.add(wall);
   }
 
-  addWall(0, -HALF, GRID * CELL, 0.12);
-  addWall(0, HALF, GRID * CELL, 0.12);
-  addWall(-HALF, 0, 0.12, GRID * CELL);
-  addWall(HALF, 0, 0.12, GRID * CELL);
+  addWall(0, -HALF, GRID * CELL, 0.14);
+  addWall(0, HALF, GRID * CELL, 0.14);
+  addWall(-HALF, 0, 0.14, GRID * CELL);
+  addWall(HALF, 0, 0.14, GRID * CELL);
 
   // --------------------------------------------------
-  // Snake
+  // Snake materials and meshes
   // --------------------------------------------------
 
   const snakeMaterial = new THREE.MeshStandardMaterial({
     color: settings.snakeColor,
     emissive: settings.snakeColor,
-    emissiveIntensity: 0.75,
-    roughness: 0.3,
-    metalness: 0.15
+    emissiveIntensity: 1.15,
+    roughness: 0.24,
+    metalness: 0.2
   });
 
   const headMaterial = new THREE.MeshStandardMaterial({
-    color: 0xd9fff2,
+    color: 0xe5fff5,
     emissive: settings.snakeColor,
-    emissiveIntensity: 1,
-    roughness: 0.25
+    emissiveIntensity: 1.4,
+    roughness: 0.2,
+    metalness: 0.12
   });
 
-  const segmentGeometry = new THREE.SphereGeometry(
-    0.48, 12, 8
-  );
+  const segmentGeometry = new THREE.SphereGeometry(0.49, 16, 12);
+  const headGeometry = new THREE.SphereGeometry(0.55, 20, 14);
+  const eyeGeometry = new THREE.SphereGeometry(0.075, 10, 8);
 
-  const headGeometry = new THREE.SphereGeometry(
-    0.53, 16, 10
-  );
+  const eyeMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff
+  });
+
+  const pupilMaterial = new THREE.MeshBasicMaterial({
+    color: 0x06121b
+  });
 
   function gridPosition(p) {
     return new THREE.Vector3(
@@ -286,15 +301,27 @@ import * as THREE from "three";
       isHead ? headMaterial : snakeMaterial
     );
 
+    if (isHead) {
+      // العينان جزء من الرأس وتدوران معه.
+      for (const side of [-1, 1]) {
+        const eye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        eye.position.set(side * 0.19, 0.30, 0.19);
+        mesh.add(eye);
+
+        const pupil = new THREE.Mesh(eyeGeometry, pupilMaterial);
+        pupil.scale.setScalar(0.52);
+        pupil.position.set(side * 0.19, 0.35, 0.225);
+        mesh.add(pupil);
+      }
+    }
+
     scene.add(mesh);
     return mesh;
   }
 
   function ensureSnakeMeshes() {
     while (segments.length < snake.length) {
-      segments.push(
-        makeSnakeMesh(segments.length === 0)
-      );
+      segments.push(makeSnakeMesh(segments.length === 0));
     }
 
     while (segments.length > snake.length) {
@@ -302,66 +329,82 @@ import * as THREE from "three";
     }
 
     segments.forEach((mesh, i) => {
-      mesh.material = i === 0
-        ? headMaterial
-        : snakeMaterial;
-
+      mesh.material = i === 0 ? headMaterial : snakeMaterial;
       mesh.scale.setScalar(
-        i === 0 ? 1.05 : Math.max(0.72, 1 - i * 0.008)
+        i === 0 ? 1.06 : Math.max(0.72, 1 - i * 0.006)
       );
     });
   }
 
-  // تحريك مرئي تدريجي بين خلايا الشبكة بدل القفز كل خطوة.
+  // --------------------------------------------------
+  // Correct smooth interpolation
+  // --------------------------------------------------
+
+  function getInterpolatedPosition(index, alpha) {
+    const current = snake[index];
+
+    if (!current) {
+      return new THREE.Vector3();
+    }
+
+    const previous = previousSnake[index] || current;
+
+    const from = gridPosition(previous);
+    const to = gridPosition(current);
+
+    return from.lerp(to, alpha);
+  }
+
   function renderSnake(alpha, seconds) {
     ensureSnakeMeshes();
 
-    segments.forEach((mesh, i) => {
-      const current = snake[i];
-      const previous = previousSnake[i] || current;
-
-      const from = gridPosition(previous);
-      const to = gridPosition(current);
+    for (let i = 0; i < segments.length; i++) {
+      const mesh = segments[i];
+      const position = getInterpolatedPosition(i, alpha);
 
       mesh.position.set(
-        THREE.MathUtils.lerp(from.x, to.x, alpha),
-        0.44 + Math.sin(seconds * 4 - i * 0.35) * 0.025,
-        THREE.MathUtils.lerp(from.z, to.z, alpha)
+        position.x,
+        0.47 + Math.sin(seconds * 4 - i * 0.32) * 0.025,
+        position.z
       );
-    });
+    }
 
     if (segments.length) {
       segments[0].rotation.y = Math.atan2(
-        direction.x, direction.z
+        direction.x,
+        direction.z
       );
     }
   }
 
   // --------------------------------------------------
-  // Smooth overhead camera tracking
+  // Smooth overhead camera
   // --------------------------------------------------
 
   const cameraTarget = new THREE.Vector3();
   const cameraDesired = new THREE.Vector3();
 
-  function updateCamera(delta) {
+  function updateCamera(delta, alpha = 1) {
     if (!snake.length) return;
 
-    const head = gridPosition(snake[0]);
+    // الكاميرا تتبع الرأس المرئي، لا إحداثياته المتقطعة.
+    const head = getInterpolatedPosition(0, alpha);
 
     cameraTarget.set(head.x, 0, head.z);
-
     cameraDesired.set(head.x, 60, head.z + 0.01);
 
-    // حركة تعتمد على الزمن لتكون متقاربة بين الأجهزة.
-    const smoothing = 1 - Math.exp(-5 * delta);
+    const smoothing = 1 - Math.exp(-7 * Math.min(delta, 0.1));
 
     camera.position.x = THREE.MathUtils.lerp(
-      camera.position.x, cameraDesired.x, smoothing
+      camera.position.x,
+      cameraDesired.x,
+      smoothing
     );
 
     camera.position.z = THREE.MathUtils.lerp(
-      camera.position.z, cameraDesired.z, smoothing
+      camera.position.z,
+      cameraDesired.z,
+      smoothing
     );
 
     camera.lookAt(cameraTarget);
@@ -390,21 +433,19 @@ import * as THREE from "three";
 
     for (let z = 0; z < GRID; z++) {
       for (let x = 0; x < GRID; x++) {
-        if (snake.some(p => p.x === x && p.z === z)) {
-          continue;
-        }
+        if (snake.some(p => p.x === x && p.z === z)) continue;
 
-        if (powerup && powerup.x === x && powerup.z === z) {
-          continue;
-        }
+        if (foodMesh && food.x === x && food.z === z) continue;
+
+        if (powerup && powerup.x === x && powerup.z === z) continue;
 
         free.push({ x, z });
       }
     }
 
-    if (!free.length) return null;
-
-    return free[Math.floor(Math.random() * free.length)];
+    return free.length
+      ? free[Math.floor(Math.random() * free.length)]
+      : null;
   }
 
   function randomFood() {
@@ -419,24 +460,21 @@ import * as THREE from "three";
     food = cell;
 
     foodMesh = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(0.38, 1),
+      new THREE.IcosahedronGeometry(0.39, 2),
       new THREE.MeshStandardMaterial({
         color: COLORS.pink,
         emissive: COLORS.pink,
-        emissiveIntensity: 2.3,
-        roughness: 0.25,
-        metalness: 0.15
+        emissiveIntensity: 2.6,
+        roughness: 0.2,
+        metalness: 0.18
       })
     );
 
     foodMesh.position.copy(gridPosition(food));
-    foodMesh.position.y = 0.55;
+    foodMesh.position.y = 0.57;
     scene.add(foodMesh);
 
-    foodLight = new THREE.PointLight(
-      COLORS.pink, 4, 6
-    );
-
+    foodLight = new THREE.PointLight(COLORS.pink, 4, 6);
     foodLight.position.copy(foodMesh.position);
     scene.add(foodLight);
 
@@ -444,17 +482,15 @@ import * as THREE from "three";
   }
 
   // --------------------------------------------------
-  // Particles: capped for mobile performance
+  // Particles
   // --------------------------------------------------
 
-  const particleGeometry = new THREE.SphereGeometry(
-    0.055, 5, 5
-  );
+  const particleGeometry = new THREE.SphereGeometry(0.055, 6, 6);
 
   function spawnParticles(position, color, count = 12) {
-    count = Math.min(
-      count,
-      MAX_PARTICLES - particles.length
+    count = Math.max(
+      0,
+      Math.min(count, MAX_PARTICLES - particles.length)
     );
 
     for (let i = 0; i < count; i++) {
@@ -465,10 +501,7 @@ import * as THREE from "three";
         depthWrite: false
       });
 
-      const mesh = new THREE.Mesh(
-        particleGeometry, material
-      );
-
+      const mesh = new THREE.Mesh(particleGeometry, material);
       mesh.position.copy(position);
       scene.add(mesh);
 
@@ -477,7 +510,7 @@ import * as THREE from "three";
         vx: (Math.random() - 0.5) * 4,
         vy: Math.random() * 2.5 + 0.5,
         vz: (Math.random() - 0.5) * 4,
-        life: 0.45 + Math.random() * 0.3,
+        life: 0.5 + Math.random() * 0.25,
         maxLife: 0.75
       });
     }
@@ -503,7 +536,6 @@ import * as THREE from "three";
       p.vy -= 4 * delta;
 
       const alpha = p.life / p.maxLife;
-
       p.mesh.material.opacity = alpha;
       p.mesh.scale.setScalar(Math.max(0.05, alpha));
     }
@@ -545,9 +577,7 @@ import * as THREE from "three";
     if (!cell) return;
 
     const types = ["boost", "slow", "bonus"];
-    const type = types[
-      Math.floor(Math.random() * types.length)
-    ];
+    const type = types[Math.floor(Math.random() * types.length)];
 
     const colors = {
       boost: COLORS.green,
@@ -564,27 +594,27 @@ import * as THREE from "three";
     const color = colors[type];
 
     powerupMesh = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.43, 0),
+      new THREE.OctahedronGeometry(0.44, 0),
       new THREE.MeshStandardMaterial({
         color,
         emissive: color,
-        emissiveIntensity: 2.3,
-        roughness: 0.25,
+        emissiveIntensity: 2.7,
+        roughness: 0.2,
         metalness: 0.15
       })
     );
 
     powerupMesh.position.copy(gridPosition(cell));
-    powerupMesh.position.y = 0.65;
+    powerupMesh.position.y = 0.66;
     scene.add(powerupMesh);
 
-    powerupLight = new THREE.PointLight(color, 3, 6);
+    powerupLight = new THREE.PointLight(color, 3.5, 7);
     powerupLight.position.copy(powerupMesh.position);
     scene.add(powerupLight);
   }
 
   function collectPowerup() {
-    if (!powerup) return;
+    if (!powerup || state !== "playing") return;
 
     const collected = { ...powerup };
 
@@ -616,10 +646,9 @@ import * as THREE from "three";
     activeEffect = collected.type;
     effectUntil = Date.now() + 5000;
 
-    $("toast").textContent =
-      collected.type === "boost"
-        ? "⚡ SPEED BOOST!"
-        : "❄ SLOW MOTION";
+    $("toast").textContent = collected.type === "boost"
+      ? "⚡ SPEED BOOST!"
+      : "❄ SLOW MOTION";
 
     toastUntil = Date.now() + 1500;
 
@@ -639,8 +668,7 @@ import * as THREE from "three";
 
     powerupMesh.rotation.x = seconds * 1.3;
     powerupMesh.rotation.y = seconds * 2;
-    powerupMesh.position.y =
-      0.65 + Math.sin(seconds * 3) * 0.12;
+    powerupMesh.position.y = 0.66 + Math.sin(seconds * 3) * 0.13;
 
     if (powerupLight) {
       powerupLight.position.copy(powerupMesh.position);
@@ -658,17 +686,15 @@ import * as THREE from "three";
       fast: 125
     }[settings.speed] || 175;
 
-    let interval = base - Math.floor(score / 100) * 4;
-
     if (activeEffect && Date.now() >= effectUntil) {
       activeEffect = null;
+      effectUntil = 0;
     }
 
-    if (activeEffect === "boost") {
-      interval *= 0.72;
-    } else if (activeEffect === "slow") {
-      interval *= 1.45;
-    }
+    let interval = base - Math.floor(score / 100) * 4;
+
+    if (activeEffect === "boost") interval *= 0.72;
+    if (activeEffect === "slow") interval *= 1.45;
 
     return Math.max(85, Math.round(interval));
   }
@@ -690,11 +716,7 @@ import * as THREE from "three";
       const gain = audioContext.createGain();
 
       osc.frequency.value = freq;
-
-      gain.gain.setValueAtTime(
-        0.045, audioContext.currentTime
-      );
-
+      gain.gain.setValueAtTime(0.045, audioContext.currentTime);
       gain.gain.exponentialRampToValueAtTime(
         0.001,
         audioContext.currentTime + duration
@@ -806,7 +828,6 @@ import * as THREE from "three";
     ];
 
     previousSnake = snake.map(p => ({ ...p }));
-
     direction = { x: 0, z: -1 };
     nextDirection = { x: 0, z: -1 };
 
@@ -826,7 +847,7 @@ import * as THREE from "three";
     });
 
     randomFood();
-    updateCamera(1);
+    updateCamera(1, 1);
 
     sound(620, 0.12);
   }
@@ -834,13 +855,8 @@ import * as THREE from "three";
   function turn(dx, dz) {
     if (state !== "playing") return;
 
-    // منع الانعكاس المباشر إلى الخلف.
-    if (
-      dx === -nextDirection.x &&
-      dz === -nextDirection.z
-    ) {
-      return;
-    }
+    // منع الانعكاس الفوري إلى الاتجاه المعاكس.
+    if (dx === -direction.x && dz === -direction.z) return;
 
     nextDirection = { x: dx, z: dz };
   }
@@ -861,10 +877,7 @@ import * as THREE from "three";
       head.x === powerup.x &&
       head.z === powerup.z;
 
-    // يمكن دخول الخلية التي سيغادرها الذيل في هذه الخطوة.
-    const body = ate
-      ? snake
-      : snake.slice(0, -1);
+    const body = ate ? snake : snake.slice(0, -1);
 
     if (
       head.x < 0 || head.x >= GRID ||
@@ -875,12 +888,11 @@ import * as THREE from "three";
       return;
     }
 
+    // حفظ الوضع السابق قبل تحديث المنطق.
     previousSnake = snake.map(p => ({ ...p }));
 
     if (ate && foodMesh) {
-      spawnParticles(
-        foodMesh.position.clone(), COLORS.pink, 12
-      );
+      spawnParticles(foodMesh.position.clone(), COLORS.pink, 14);
     }
 
     snake.unshift(head);
@@ -911,6 +923,8 @@ import * as THREE from "three";
     if (state !== "playing") return;
 
     state = "over";
+    accumulator = 0;
+
     removePowerup();
 
     activeEffect = null;
@@ -949,12 +963,14 @@ import * as THREE from "three";
     $("pause").classList.add("hidden");
     state = "playing";
     accumulator = 0;
+    lastFrameTime = 0;
   }
 
   function goMenu() {
     state = "menu";
     accumulator = 0;
 
+    removeFood();
     removePowerup();
     clearParticles();
 
@@ -984,7 +1000,7 @@ import * as THREE from "three";
   }
 
   // --------------------------------------------------
-  // Keyboard and buttons
+  // Keyboard
   // --------------------------------------------------
 
   $("playBtn").addEventListener("click", startGame);
@@ -1001,18 +1017,10 @@ import * as THREE from "three";
 
   document.addEventListener("keydown", e => {
     const keys = {
-      ArrowUp: [0, -1],
-      w: [0, -1],
-      W: [0, -1],
-      ArrowDown: [0, 1],
-      s: [0, 1],
-      S: [0, 1],
-      ArrowLeft: [-1, 0],
-      a: [-1, 0],
-      A: [-1, 0],
-      ArrowRight: [1, 0],
-      d: [1, 0],
-      D: [1, 0]
+      ArrowUp: [0, -1], w: [0, -1], W: [0, -1],
+      ArrowDown: [0, 1], s: [0, 1], S: [0, 1],
+      ArrowLeft: [-1, 0], a: [-1, 0], A: [-1, 0],
+      ArrowRight: [1, 0], d: [1, 0], D: [1, 0]
     };
 
     if (e.key === "Escape" || e.key.toLowerCase() === "p") {
@@ -1109,39 +1117,46 @@ import * as THREE from "three";
   joystick.addEventListener("lostpointercapture", resetJoystick);
 
   // --------------------------------------------------
-  // Main animation loop
+  // 30 FPS rendering + independent game simulation
   // --------------------------------------------------
 
   function animate(time) {
     requestAnimationFrame(animate);
 
-    const seconds = time / 1000;
-    const delta = lastTime
-      ? Math.min((time - lastTime) / 1000, 0.05)
+    // تحديد معدل الرسم المستهدف إلى 30 إطارًا في الثانية.
+    if (lastFrameTime && time - lastFrameTime < FRAME_MS) {
+      return;
+    }
+
+    const delta = lastFrameTime
+      ? Math.min((time - lastFrameTime) / 1000, 0.1)
       : 0;
 
-    lastTime = time;
+    lastFrameTime = time;
+
+    const seconds = time / 1000;
 
     if (state === "playing") {
       accumulator += delta * 1000;
 
-      // منطق اللعبة ثابت التوقيت، والرسم مستقل عنه.
+      // تحديث المنطق بخطوات ثابتة مع الاحتفاظ بالوقت المتبقي.
       let safety = 0;
 
-      while (
-        state === "playing" &&
-        accumulator >= speedMs() &&
-        safety < 4
-      ) {
+      while (state === "playing" && safety < 4) {
         const interval = speedMs();
+
+        if (accumulator < interval) break;
 
         accumulator -= interval;
         step();
         safety++;
       }
 
-      // منع قفزة كبيرة بعد تباطؤ الجهاز.
-      if (safety >= 4) accumulator = 0;
+      // لا نحذف الوقت المتبقي في الظروف الطبيعية.
+      // عند تأخر شديد فقط نحد من تراكم الخطوات.
+      if (safety >= 4) {
+        accumulator = Math.min(accumulator, speedMs());
+      }
     } else {
       accumulator = 0;
     }
@@ -1159,10 +1174,9 @@ import * as THREE from "three";
     }
 
     if (foodMesh) {
-      foodMesh.rotation.y = seconds * 1.5;
+      foodMesh.rotation.y = seconds * 1.7;
       foodMesh.rotation.x = Math.sin(seconds) * 0.2;
-      foodMesh.position.y =
-        0.55 + Math.sin(seconds * 2.5) * 0.1;
+      foodMesh.position.y = 0.57 + Math.sin(seconds * 2.5) * 0.11;
 
       if (foodLight) {
         foodLight.position.copy(foodMesh.position);
@@ -1170,9 +1184,7 @@ import * as THREE from "three";
     }
 
     renderSnake(alpha, seconds);
-
-    // الكاميرا تتبع الثعبان من الأعلى بسلاسة.
-    updateCamera(delta);
+    updateCamera(delta, alpha);
 
     renderer.render(scene, camera);
   }
@@ -1207,7 +1219,7 @@ import * as THREE from "three";
   });
 
   randomFood();
-  updateCamera(1);
+  updateCamera(1, 1);
 
   requestAnimationFrame(animate);
 })();
